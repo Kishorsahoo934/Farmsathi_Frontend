@@ -7,6 +7,7 @@ export default function CropRecommendPage() {
   const [form, setForm] = useState({ nitrogen: '', phosphorus: '', potassium: '', temperature: '', humidity: '', ph: '', rainfall: '' });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -29,6 +30,40 @@ export default function CropRecommendPage() {
     }
   };
 
+  const handleAutoFill = () => {
+    if (!navigator.geolocation) {
+      showToast('Geolocation is not supported by your browser.', 'error');
+      return;
+    }
+    setFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,precipitation`);
+          if (!res.ok) throw new Error('API Error');
+          const data = await res.json();
+          
+          setForm(prev => ({
+            ...prev,
+            temperature: data.current.temperature_2m,
+            humidity: data.current.relative_humidity_2m,
+            rainfall: data.current.precipitation,
+          }));
+          showToast('Location detected! Weather data filled out.', 'success');
+        } catch (err) {
+          showToast('Failed to fetch weather data from Open-Meteo.', 'error');
+        } finally {
+          setFetchingLocation(false);
+        }
+      },
+      (err) => {
+        showToast('Unable to retrieve your location.', 'error');
+        setFetchingLocation(false);
+      }
+    );
+  };
+
   const fields = [
     { name: 'nitrogen', label: 'Nitrogen (N)', min: 0 },
     { name: 'phosphorus', label: 'Phosphorus (P)', min: 0 },
@@ -46,6 +81,17 @@ export default function CropRecommendPage() {
         <p className="muted-text">Enter your soil and weather parameters to get the best crop suggestion.</p>
       </section>
       <section className="form-section">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={handleAutoFill} 
+            disabled={fetchingLocation}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+          >
+            {fetchingLocation ? '⏳ Detecting...' : '📍 Auto-fill Weather Data'}
+          </button>
+        </div>
         <form onSubmit={handleSubmit} className="grid-form">
           {fields.map((f) => (
             <div className="form-group" key={f.name}>

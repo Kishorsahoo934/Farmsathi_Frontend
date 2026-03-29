@@ -7,6 +7,7 @@ export default function FertilizerRecommendPage() {
   const [form, setForm] = useState({ temp: '', humidity: '', moisture: '', nitrogen: '', phosphorous: '', potassium: '', ph: '', soil_type: '', crop_type: '' });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -29,6 +30,45 @@ export default function FertilizerRecommendPage() {
     }
   };
 
+  const handleAutoFill = () => {
+    if (!navigator.geolocation) {
+      showToast('Geolocation is not supported by your browser.', 'error');
+      return;
+    }
+    setFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m&hourly=soil_moisture_0_to_1cm`);
+          if (!res.ok) throw new Error('API Error');
+          const data = await res.json();
+          
+          let moistureVal = '';
+          if (data.hourly && data.hourly.soil_moisture_0_to_1cm && data.hourly.soil_moisture_0_to_1cm.length > 0) {
+            moistureVal = (data.hourly.soil_moisture_0_to_1cm[0] * 100).toFixed(1);
+          }
+
+          setForm(prev => ({
+            ...prev,
+            temp: data.current.temperature_2m,
+            humidity: data.current.relative_humidity_2m,
+            moisture: moistureVal,
+          }));
+          showToast('Location detected! Weather and soil data filled.', 'success');
+        } catch (err) {
+          showToast('Failed to fetch data from Open-Meteo.', 'error');
+        } finally {
+          setFetchingLocation(false);
+        }
+      },
+      (err) => {
+        showToast('Unable to retrieve your location.', 'error');
+        setFetchingLocation(false);
+      }
+    );
+  };
+
   const numFields = [
     { name: 'temp', label: 'Temperature (°C)' },
     { name: 'humidity', label: 'Humidity (%)', min: 0, max: 100 },
@@ -46,6 +86,17 @@ export default function FertilizerRecommendPage() {
         <p className="muted-text">Get an optimal fertilizer plan based on your soil and crop details.</p>
       </section>
       <section className="form-section">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.25rem' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={handleAutoFill} 
+            disabled={fetchingLocation}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+          >
+            {fetchingLocation ? '⏳ Detecting...' : '📍 Auto-fill Weather & Soil Data'}
+          </button>
+        </div>
         <form onSubmit={handleSubmit} className="grid-form">
           {numFields.map((f) => (
             <div className="form-group" key={f.name}>
