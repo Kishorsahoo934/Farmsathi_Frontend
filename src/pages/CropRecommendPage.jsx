@@ -65,10 +65,10 @@ export default function CropRecommendPage() {
   };
 
   const fields = [
-    { name: 'nitrogen', label: 'Nitrogen (N)', min: 0 },
-    { name: 'phosphorus', label: 'Phosphorus (P)', min: 0 },
-    { name: 'potassium', label: 'Potassium (K)', min: 0 },
-    { name: 'temperature', label: 'Temperature (°C)' },
+    { name: 'nitrogen', label: 'Nitrogen (N)', min: 0 ,max:46},
+    { name: 'phosphorus', label: 'Phosphorus (P)', min: 0,max:52 },
+    { name: 'potassium', label: 'Potassium (K)', min: 0,max:60 },
+    { name: 'temperature', label: 'Temperature (°C)' ,max:60},
     { name: 'humidity', label: 'Humidity (%)', min: 0, max: 100 },
     { name: 'ph', label: 'pH', min: 0, max: 14, step: 0.1 },
     { name: 'rainfall', label: 'Rainfall (mm)', min: 0 },
