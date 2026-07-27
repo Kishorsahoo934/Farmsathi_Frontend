@@ -225,27 +225,23 @@ export default function ChatbotWidget() {
     };
 
     recog.onerror = () => {
-      if (isInCallRef.current && !isSpeakingNowRef.current) {
-        setTimeout(() => {
-          try {
-            if (recognitionRef.current) {
-              recognitionRef.current.start();
-            }
-          } catch (e) {}
-        }, 500);
-      }
+      setTimeout(() => {
+        try {
+          if (isInCallRef.current && !isSpeakingNowRef.current && recognitionRef.current) {
+            recognitionRef.current.start();
+          }
+        } catch (e) {}
+      }, 500);
     };
 
     recog.onend = () => {
-      if (isInCallRef.current && !isSpeakingNowRef.current) {
-        setTimeout(() => {
-          try {
-            if (recognitionRef.current) {
-              recognitionRef.current.start();
-            }
-          } catch (e) {}
-        }, 300);
-      }
+      setTimeout(() => {
+        try {
+          if (isInCallRef.current && !isSpeakingNowRef.current && recognitionRef.current) {
+            recognitionRef.current.start();
+          }
+        } catch (e) {}
+      }, 300);
     };
 
     return recog;
@@ -260,23 +256,25 @@ export default function ChatbotWidget() {
     setStatus(lang === 'hi' ? "🗣️ बोल रहा हूँ..." : "🗣️ Speaking...");
 
     speakText(greetingMsg, lang).then(() => {
-      isSpeakingNowRef.current = false;
-      if (isInCallRef.current) {
-        setStatus(lang === 'hi' ? "🎧 सुन रहा हूँ..." : "🎧 Listening...");
+      setTimeout(() => {
+        isSpeakingNowRef.current = false;
+        if (isInCallRef.current) {
+          setStatus(lang === 'hi' ? "🎧 सुन रहा हूँ..." : "🎧 Listening...");
 
-        if (recognitionRef.current) {
-          try {
-            recognitionRef.current.abort();
-          } catch (e) {}
+          if (recognitionRef.current) {
+            try {
+              recognitionRef.current.abort();
+            } catch (e) {}
+          }
+          const recog = initRecognition(lang);
+          recognitionRef.current = recog;
+          if (recog) {
+            try {
+              recog.start();
+            } catch (e) {}
+          }
         }
-        const recog = initRecognition(lang);
-        recognitionRef.current = recog;
-        if (recog) {
-          try {
-            recog.start();
-          } catch (e) {}
-        }
-      }
+      }, 600);
     });
   };
 
@@ -395,17 +393,18 @@ export default function ChatbotWidget() {
         setStatus(currentLanguageRef.current === 'hi' ? "🗣️ बोल रहा हूँ..." : "🗣️ Speaking...");
         await speakText(reply, currentLanguageRef.current);
 
-        isSpeakingNowRef.current = false;
-
-        // Resume listening
-        if (isInCallRef.current) {
-          setStatus(currentLanguageRef.current === 'hi' ? "🎧 सुन रहा हूँ..." : "🎧 Listening...");
-          if (recognitionRef.current) {
-            try {
-              recognitionRef.current.start();
-            } catch (e) {}
+        // Add 600ms delay to prevent tail-end audio capture from triggering loop
+        setTimeout(() => {
+          isSpeakingNowRef.current = false;
+          if (isInCallRef.current) {
+            setStatus(currentLanguageRef.current === 'hi' ? "🎧 सुन रहा हूँ..." : "🎧 Listening...");
+            if (recognitionRef.current) {
+              try {
+                recognitionRef.current.start();
+              } catch (e) {}
+            }
           }
-        }
+        }, 600);
       } else {
         // Standard text mode: call backend as before
         const fd = new FormData();
@@ -422,12 +421,15 @@ export default function ChatbotWidget() {
       if (isCallActive) {
         const errorMsg = currentLanguageRef.current === 'hi' ? "क्षमा करें, कनेक्शन में समस्या है।" : "Sorry, there is a connection issue.";
         await speakText(errorMsg, currentLanguageRef.current);
-        isSpeakingNowRef.current = false;
-        if (isInCallRef.current && recognitionRef.current) {
-          try {
-            recognitionRef.current.start();
-          } catch (e) {}
-        }
+        
+        setTimeout(() => {
+          isSpeakingNowRef.current = false;
+          if (isInCallRef.current && recognitionRef.current) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {}
+          }
+        }, 600);
       }
     } finally {
       setLoading(false);
