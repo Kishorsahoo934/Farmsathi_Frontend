@@ -1,5 +1,9 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config/constants';
+
+/*
+// FIREBASE CODE PRESERVED FOR FUTURE USE (AS REQUESTED)
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -10,7 +14,7 @@ import {
   getRedirectResult,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
-import { API_BASE_URL } from '../config/constants';
+*/
 
 const AuthContext = createContext(null);
 
@@ -20,28 +24,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  // Initialize user from localStorage (Mock Persistence)
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return unsub;
+    const savedUser = localStorage.getItem('farmsathi_user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        console.error('Error parsing saved user:', e);
+      }
+    }
+    setLoading(false);
   }, []);
-
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          setUser(result.user);
-          navigate('/dashboard');
-        }
-      })
-      .catch((error) => {
-        console.error('Firebase redirect sign-in error:', error);
-        setAuthError(error.message);
-        window.alert(`Firebase Redirect Auth Error: ${error.message}\n\nIf this says "auth/unauthorized-domain", you must add your current domain (e.g. your Vercel URL) to the 'Authorized Domains' list in your Firebase Console under Authentication -> Settings.`);
-      });
-  }, [navigate]);
 
   useEffect(() => {
     // Ping backend to wake it up from cold start on Render
@@ -56,23 +50,89 @@ export function AuthProvider({ children }) {
     wakeupBackend();
   }, []);
 
-  const login = useCallback((email, password) =>
-    signInWithEmailAndPassword(auth, email, password), []);
+  // Helper to manage registered users in localStorage
+  const getRegisteredUsers = () => {
+    const users = localStorage.getItem('farmsathi_registered_users');
+    return users ? JSON.parse(users) : {};
+  };
 
-  const signup = useCallback((email, password) =>
-    createUserWithEmailAndPassword(auth, email, password), []);
+  const saveRegisteredUsers = (users) => {
+    localStorage.setItem('farmsathi_registered_users', JSON.stringify(users));
+  };
 
-  const loginWithGoogle = useCallback(() => {
-    return signInWithPopup(auth, googleProvider).catch((error) => {
-      if (error.code === 'auth/popup-blocked') {
-        return signInWithRedirect(auth, googleProvider);
-      }
+  // Mock Password Login
+  const login = useCallback(async (email, password) => {
+    await new Promise((r) => setTimeout(r, 400)); // Simulated delay
+    const users = getRegisteredUsers();
+    const cleanEmail = email.toLowerCase().trim();
+    if (!users[cleanEmail]) {
+      const error = new Error('No account found with this email.');
+      error.code = 'auth/user-not-found';
       throw error;
-    });
+    }
+    if (users[cleanEmail].password !== password) {
+      const error = new Error('Incorrect password.');
+      error.code = 'auth/wrong-password';
+      throw error;
+    }
+    const loggedUser = {
+      uid: users[cleanEmail].uid || Math.random().toString(36).substring(2),
+      email: cleanEmail,
+      displayName: users[cleanEmail].displayName || cleanEmail.split('@')[0],
+    };
+    localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
+    setUser(loggedUser);
+    return { user: loggedUser };
   }, []);
 
-  const logout = useCallback(() => signOut(auth), []);
+  // Mock Signup
+  const signup = useCallback(async (email, password) => {
+    await new Promise((r) => setTimeout(r, 400)); // Simulated delay
+    const users = getRegisteredUsers();
+    const cleanEmail = email.toLowerCase().trim();
+    if (users[cleanEmail]) {
+      const error = new Error('This email is already registered.');
+      error.code = 'auth/email-already-in-use';
+      throw error;
+    }
+    const newUid = Math.random().toString(36).substring(2);
+    users[cleanEmail] = {
+      uid: newUid,
+      email: cleanEmail,
+      password: password,
+      displayName: cleanEmail.split('@')[0],
+    };
+    saveRegisteredUsers(users);
+    const loggedUser = {
+      uid: newUid,
+      email: cleanEmail,
+      displayName: cleanEmail.split('@')[0],
+    };
+    localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
+    setUser(loggedUser);
+    return { user: loggedUser };
+  }, []);
 
+  // Mock Google Login (Instantly logs in without popups/redirect issues)
+  const loginWithGoogle = useCallback(async () => {
+    await new Promise((r) => setTimeout(r, 300)); // Simulated delay
+    const loggedUser = {
+      uid: 'mock-google-uid-123',
+      email: 'kishorsahoo934@gmail.com',
+      displayName: 'Kishor Sahoo',
+    };
+    localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
+    setUser(loggedUser);
+    return { user: loggedUser };
+  }, []);
+
+  // Mock Logout
+  const logout = useCallback(async () => {
+    localStorage.removeItem('farmsathi_user');
+    setUser(null);
+  }, []);
+
+  // Real OTP generation & delivery using backend SMTP
   const sendOtp = useCallback(async (email) => {
     const res = await fetch(`${API_BASE_URL}/send-otp`, {
       method: 'POST',
@@ -86,6 +146,7 @@ export function AuthProvider({ children }) {
     return res.json();
   }, []);
 
+  // Real OTP verification using backend API
   const verifyOtp = useCallback(async (email, otp) => {
     const res = await fetch(`${API_BASE_URL}/verify-otp`, {
       method: 'POST',
