@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -14,6 +15,7 @@ import { API_BASE_URL } from '../config/constants';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
@@ -31,6 +33,7 @@ export function AuthProvider({ children }) {
       .then((result) => {
         if (result?.user) {
           setUser(result.user);
+          navigate('/dashboard');
         }
       })
       .catch((error) => {
@@ -38,7 +41,7 @@ export function AuthProvider({ children }) {
         setAuthError(error.message);
         window.alert(`Firebase Redirect Auth Error: ${error.message}\n\nIf this says "auth/unauthorized-domain", you must add your current domain (e.g. your Vercel URL) to the 'Authorized Domains' list in your Firebase Console under Authentication -> Settings.`);
       });
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     // Ping backend to wake it up from cold start on Render
