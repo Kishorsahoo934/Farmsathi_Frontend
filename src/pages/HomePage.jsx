@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
@@ -7,6 +7,12 @@ export default function HomePage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleGetStarted = () => {
     if (user) navigate('/dashboard');
