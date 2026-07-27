@@ -23,6 +23,19 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
+  useEffect(() => {
+    // Ping backend to wake it up from cold start on Render
+    const wakeupBackend = async () => {
+      try {
+        await fetch(API_BASE_URL);
+        console.log('Backend wakeup ping sent successfully.');
+      } catch (err) {
+        console.error('Failed to wake up the backend:', err);
+      }
+    };
+    wakeupBackend();
+  }, []);
+
   const login = useCallback((email, password) =>
     signInWithEmailAndPassword(auth, email, password), []);
 
