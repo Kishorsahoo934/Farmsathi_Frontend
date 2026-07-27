@@ -5,7 +5,6 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   signInWithPopup,
-  signInWithRedirect,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 import { API_BASE_URL } from '../config/constants';
@@ -43,14 +42,8 @@ export function AuthProvider({ children }) {
   const signup = useCallback((email, password) =>
     createUserWithEmailAndPassword(auth, email, password), []);
 
-  const loginWithGoogle = useCallback(() => {
-    return signInWithPopup(auth, googleProvider).catch((error) => {
-      if (error.code === 'auth/popup-blocked') {
-        return signInWithRedirect(auth, googleProvider);
-      }
-      throw error;
-    });
-  }, []);
+  const loginWithGoogle = useCallback(() =>
+    signInWithPopup(auth, googleProvider), []);
 
   const logout = useCallback(() => signOut(auth), []);
 
