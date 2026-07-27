@@ -9,6 +9,11 @@ const GREETINGS = {
   en: "Hello farmer friend! I am FarmSathi Assistant. How can I help you today?"
 };
 
+const SYSTEM_PROMPTS = {
+  hi: "आप फार्मसाथी (FarmSathi) हैं - किसानों के सहायक AI असिस्टेंट। किसानों को फसलों, मौसम, कीट नियंत्रण और खाद के बारे में सरल हिंदी में 1-2 छोटे वाक्यों में स्पष्ट और उपयोगी सलाह दें।",
+  en: "You are FarmSathi, an AI assistant for farmers. Provide concise 1-2 sentence advice regarding crops, weather, and agricultural care."
+};
+
 // Simple markdown → HTML for chatbot messages
 function renderMarkdown(text) {
   return text
@@ -44,6 +49,11 @@ export default function ChatbotWidget() {
   const recognitionRef = useRef(null);
   const isSpeakingNowRef = useRef(false);
   const synthesisRef = useRef(window.speechSynthesis);
+  const conversationHistoryRef = useRef([]);
+
+  // Read API Key from environment variables
+  const API_KEY = import.meta.env.VITE_GROQ_API_KEY || import.meta.env.VITE_API_KEY || "";
+
 
   // Synchronized refs for event handlers to prevent stale closures
   const isInCallRef = useRef(isInCall);
@@ -285,6 +295,7 @@ export default function ChatbotWidget() {
     }
     recognitionRef.current = recog;
 
+    conversationHistoryRef.current = [{ role: "system", content: SYSTEM_PROMPTS[currentLanguage] }];
     setIsInCall(true);
     triggerGreeting(currentLanguage);
   };
@@ -323,6 +334,7 @@ export default function ChatbotWidget() {
   const handleSetLanguage = (lang) => {
     setCurrentLanguage(lang);
     if (isInCallRef.current) {
+      conversationHistoryRef.current = [{ role: "system", content: SYSTEM_PROMPTS[lang] }];
       // If already in call, switch language and trigger greeting
       triggerGreeting(lang);
     }
@@ -338,6 +350,14 @@ export default function ChatbotWidget() {
     setLoading(true);
     setMessages((prev) => [...prev, { sender: 'typing', text: 'Thinking…' }]);
 
+    const isCallActive = isInCallRef.current;
+
+    // VERY IMPORTANT: Prevent loop by setting speaking state immediately to prevent recognition auto-restart
+    if (isCallActive) {
+      isSpeakingNowRef.current = true;
+      setStatus(currentLanguageRef.current === 'hi' ? "🤔 सोच रहा हूँ..." : "🤔 Thinking...");
+    }
+
     // Pause recognition while processing API call
     if (recognitionRef.current) {
       try {
@@ -346,30 +366,35 @@ export default function ChatbotWidget() {
     }
 
     try {
-      let finalQuery = query;
-      // Append instruction to get short replies if in call mode
-      if (isInCallRef.current) {
-        setStatus(currentLanguageRef.current === 'hi' ? "🤔 सोच रहा हूँ..." : "🤔 Thinking...");
-        if (currentLanguageRef.current === 'hi') {
-          finalQuery += " (कृपया उत्तर सरल हिंदी में केवल 1 या 2 छोटे वाक्यों में दें)";
-        } else {
-          finalQuery += " (Please reply in only 1 or 2 short sentences in English)";
-        }
-      }
+      if (isCallActive) {
+        // Voice Calling mode: call Groq API directly from the frontend
+        conversationHistoryRef.current.push({ role: "user", content: query });
 
-      const fd = new FormData();
-      fd.append('query', finalQuery);
-      const res = await fetch(`${API_BASE_URL}/chatbot`, { method: 'POST', body: fd });
-      const data = await res.json();
-      const reply = data.response || data.message || 'Sorry, I could not process that.';
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + API_KEY
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages: conversationHistoryRef.current,
+            max_tokens: 120,
+            temperature: 0.6
+          })
+        });
 
-      setMessages((prev) => [...prev.filter((m) => m.sender !== 'typing'), { sender: 'bot', text: reply }]);
+        if (!res.ok) throw new Error("API Request Failed");
+        const data = await res.json();
+        const reply = data.choices[0].message.content.replace(/[*_#`~]/g, '').trim();
 
-      // If in voice calling mode, speak the response
-      if (isInCallRef.current) {
-        isSpeakingNowRef.current = true;
+        conversationHistoryRef.current.push({ role: "assistant", content: reply });
+        setMessages((prev) => [...prev.filter((m) => m.sender !== 'typing'), { sender: 'bot', text: reply }]);
+
+        // Speak the response
         setStatus(currentLanguageRef.current === 'hi' ? "🗣️ बोल रहा हूँ..." : "🗣️ Speaking...");
         await speakText(reply, currentLanguageRef.current);
+
         isSpeakingNowRef.current = false;
 
         // Resume listening
@@ -381,12 +406,23 @@ export default function ChatbotWidget() {
             } catch (e) {}
           }
         }
+      } else {
+        // Standard text mode: call backend as before
+        const fd = new FormData();
+        fd.append('query', query);
+        const res = await fetch(`${API_BASE_URL}/chatbot`, { method: 'POST', body: fd });
+        const data = await res.json();
+        const reply = data.response || data.message || 'Sorry, I could not process that.';
+
+        setMessages((prev) => [...prev.filter((m) => m.sender !== 'typing'), { sender: 'bot', text: reply }]);
       }
-    } catch {
+    } catch (error) {
+      console.error(error);
       setMessages((prev) => [...prev.filter((m) => m.sender !== 'typing'), { sender: 'bot', text: 'Sorry, the assistant is unavailable right now.' }]);
-      if (isInCallRef.current) {
+      if (isCallActive) {
         const errorMsg = currentLanguageRef.current === 'hi' ? "क्षमा करें, कनेक्शन में समस्या है।" : "Sorry, there is a connection issue.";
         await speakText(errorMsg, currentLanguageRef.current);
+        isSpeakingNowRef.current = false;
         if (isInCallRef.current && recognitionRef.current) {
           try {
             recognitionRef.current.start();
