@@ -16,6 +16,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -34,6 +35,8 @@ export function AuthProvider({ children }) {
       })
       .catch((error) => {
         console.error('Firebase redirect sign-in error:', error);
+        setAuthError(error.message);
+        window.alert(`Firebase Redirect Auth Error: ${error.message}\n\nIf this says "auth/unauthorized-domain", you must add your current domain (e.g. your Vercel URL) to the 'Authorized Domains' list in your Firebase Console under Authentication -> Settings.`);
       });
   }, []);
 
@@ -109,7 +112,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, loginWithGoogle, logout, sendOtp, verifyOtp, getFirebaseErrorMessage }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, loginWithGoogle, logout, sendOtp, verifyOtp, getFirebaseErrorMessage, authError, setAuthError }}>
       {!loading && children}
     </AuthContext.Provider>
   );

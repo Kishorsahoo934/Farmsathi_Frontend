@@ -140,9 +140,9 @@ export default function AuthModal({ onClose }) {
   };
 
   const handleGoogle = () => {
-    setError('');
     loginWithGoogle()
       .then(() => {
+        setError('');
         showToast('Signed in with Google!', 'success');
         onClose();
         navigate('/dashboard');
