@@ -503,12 +503,91 @@ main { padding-top: 68px; }
   display: flex; align-items: center; justify-content: space-between;
   font-weight: 700; font-size: 0.95rem;
 }
+.chatbot-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-left: auto;
+  margin-right: 0.75rem;
+}
+.lang-toggle-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #e8f5e9;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+}
+.lang-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+.lang-toggle-btn.active {
+  background: #81c784;
+  color: #0d1f0d;
+  border-color: #81c784;
+}
 .chatbot-close {
   background: none; border: none; color: #fff; font-size: 1.1rem;
   cursor: pointer; padding: 0.2rem 0.4rem; border-radius: 4px;
   transition: background 0.2s; line-height: 1;
 }
 .chatbot-close:hover { background: rgba(255,255,255,0.15); }
+
+/* Voice Assistant Status Bar */
+.chatbot-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: #f1f8e9;
+  border-bottom: 1px solid #e8f5e9;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2e7d32;
+  animation: slideDown 0.25s ease-out;
+}
+.chatbot-status-text {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.chatbot-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4caf50;
+  display: inline-block;
+}
+.chatbot-status-indicator.listening {
+  background-color: #4caf50;
+  animation: blinkIndicator 1s infinite alternate;
+}
+.chatbot-status-indicator.speaking {
+  background-color: #2196f3;
+  animation: blinkIndicator 0.8s infinite alternate;
+}
+.chatbot-status-indicator.thinking {
+  background-color: #ff9800;
+  animation: rotateIndicator 1s infinite linear;
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes blinkIndicator {
+  from { opacity: 0.4; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1.1); }
+}
+@keyframes rotateIndicator {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .chatbot-body {
   flex: 1; padding: 1rem; overflow-y: auto; background: #f9f9f9; min-height: 0;
 }
@@ -526,12 +605,52 @@ main { padding-top: 68px; }
   display: flex; gap: 0.5rem; padding: 0.75rem 0.9rem;
   border-top: 1px solid #eee; background: #fff;
 }
-.chatbot-form input {
-  flex: 1; padding: 0.65rem 1rem; border-radius: 10px;
-  border: 1.5px solid #ddd; font-size: 0.9rem; font-family: 'Inter', sans-serif;
+.chatbot-input-container {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+.chatbot-input-container input {
+  width: 100%;
+  padding: 0.65rem 2.8rem 0.65rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid #ddd;
+  font-size: 0.9rem;
+  font-family: 'Inter', sans-serif;
   transition: border-color 0.25s;
 }
-.chatbot-form input:focus { outline: none; border-color: #4caf50; }
+.chatbot-input-container input:focus { outline: none; border-color: #4caf50; }
+.chatbot-voice-btn {
+  position: absolute;
+  right: 0.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.15rem;
+  padding: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+}
+.chatbot-voice-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.chatbot-voice-btn.active {
+  background: #e53935;
+  color: #fff;
+  animation: micPulse 1.5s infinite;
+}
+@keyframes micPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(229, 57, 53, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(229, 57, 53, 0); }
+}
 .chatbot-form button { border-radius: 10px; padding: 0.65rem 1.1rem; }
 
 /* ============================================================
