@@ -5,6 +5,8 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
 } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 import { API_BASE_URL } from '../config/constants';
@@ -21,6 +23,18 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
     return unsub;
+  }, []);
+
+  useEffect(() => {
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          setUser(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error('Firebase redirect sign-in error:', error);
+      });
   }, []);
 
   useEffect(() => {
@@ -42,8 +56,14 @@ export function AuthProvider({ children }) {
   const signup = useCallback((email, password) =>
     createUserWithEmailAndPassword(auth, email, password), []);
 
-  const loginWithGoogle = useCallback(() =>
-    signInWithPopup(auth, googleProvider), []);
+  const loginWithGoogle = useCallback(() => {
+    return signInWithPopup(auth, googleProvider).catch((error) => {
+      if (error.code === 'auth/popup-blocked') {
+        return signInWithRedirect(auth, googleProvider);
+      }
+      throw error;
+    });
+  }, []);
 
   const logout = useCallback(() => signOut(auth), []);
 
