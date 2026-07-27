@@ -139,16 +139,17 @@ export default function AuthModal({ onClose }) {
     }
   };
 
-  const handleGoogle = async () => {
+  const handleGoogle = () => {
     setError('');
-    try {
-      await loginWithGoogle();
-      showToast('Signed in with Google!', 'success');
-      onClose();
-      navigate('/dashboard');
-    } catch (err) {
-      setError(getFirebaseErrorMessage(err));
-    }
+    loginWithGoogle()
+      .then(() => {
+        showToast('Signed in with Google!', 'success');
+        onClose();
+        navigate('/dashboard');
+      })
+      .catch((err) => {
+        setError(getFirebaseErrorMessage(err));
+      });
   };
 
   return (
