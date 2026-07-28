@@ -151,28 +151,24 @@ export function AuthProvider({ children }) {
     return { user: loggedUser };
   }, []);
 
-  // Real Google Login using Firebase Auth
-  const loginWithGoogle = useCallback(async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = result.user;
-      const loggedUser = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-      };
-      localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
-      setUser(loggedUser);
-      return { user: loggedUser };
-    } catch (error) {
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-        console.log("Popup blocked or closed by user, falling back to redirect flow.");
-        await signInWithRedirect(auth, googleProvider);
-        return;
-      }
-      console.error("Google Auth Error:", error);
-      throw error;
-    }
+  // Real Google Login using Firebase Auth (Synchronous call to prevent popup blocking)
+  const loginWithGoogle = useCallback(() => {
+    return signInWithPopup(auth, googleProvider)
+      .then((result) => {
+        const firebaseUser = result.user;
+        const loggedUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+        };
+        localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
+        setUser(loggedUser);
+        return { user: loggedUser };
+      })
+      .catch((error) => {
+        console.error("Google Auth Error:", error);
+        throw error;
+      });
   }, []);
 
   // Logout (handles both Firebase and Mock sessions)

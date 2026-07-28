@@ -50,20 +50,21 @@ export default function AuthModal({ onClose }) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     setError('');
     setLoading(true);
-    try {
-      const res = await loginWithGoogle();
-      if (res && res.user) {
-        showToast('Welcome to FarmSathi 🌾', 'success');
-        onClose();
-        navigate('/dashboard');
-      }
-    } catch (err) {
-      setError(getFirebaseErrorMessage(err));
-      setLoading(false);
-    }
+    loginWithGoogle()
+      .then((res) => {
+        if (res && res.user) {
+          showToast('Welcome to FarmSathi 🌾', 'success');
+          onClose();
+          navigate('/dashboard');
+        }
+      })
+      .catch((err) => {
+        setError(getFirebaseErrorMessage(err));
+        setLoading(false);
+      });
   };
 
   return (
