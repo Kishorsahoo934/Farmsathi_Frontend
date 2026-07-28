@@ -80,6 +80,8 @@ export default function ChatbotWidget() {
   const synthesisRef = useRef(window.speechSynthesis);
   const conversationHistoryRef = useRef([]);
   const lastSpokenTextRef = useRef('');
+  const activeAudioRef = useRef(null);
+  const speechTimeoutRef = useRef(null);
 
   // Read API Key from environment variables
   const API_KEY = import.meta.env.VITE_GROQ_API_KEY || import.meta.env.VITE_API_KEY || "";
@@ -206,6 +208,15 @@ export default function ChatbotWidget() {
       }
       synth.cancel();
 
+      // Pause and clear any currently playing Google Translate audio
+      if (activeAudioRef.current) {
+        try {
+          activeAudioRef.current.pause();
+          activeAudioRef.current.src = "";
+        } catch (e) {}
+        activeAudioRef.current = null;
+      }
+
       // Strip markdown tags before speaking
       const plainText = text.replace(/[*_#`~]/g, '').trim();
       lastSpokenTextRef.current = plainText;
@@ -217,6 +228,8 @@ export default function ChatbotWidget() {
       if (lang === 'hi' && (!isNativeHindi || !isPremiumVoice) && plainText.length < 200) {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=hi&client=tw-ob&q=${encodeURIComponent(plainText)}`;
         const audio = new Audio(url);
+        activeAudioRef.current = audio;
+        
         let fallbackCalled = false;
         const triggerFallback = () => {
           if (!fallbackCalled) {
@@ -224,11 +237,22 @@ export default function ChatbotWidget() {
             playBrowserSynth(plainText, lang, matchedVoice, resolve);
           }
         };
-        audio.onended = () => resolve();
+        audio.onended = () => {
+          if (activeAudioRef.current === audio) {
+            activeAudioRef.current = null;
+          }
+          resolve();
+        };
         audio.onerror = () => {
+          if (activeAudioRef.current === audio) {
+            activeAudioRef.current = null;
+          }
           triggerFallback();
         };
         audio.play().catch(() => {
+          if (activeAudioRef.current === audio) {
+            activeAudioRef.current = null;
+          }
           triggerFallback();
         });
         return;
@@ -293,6 +317,11 @@ export default function ChatbotWidget() {
 
   // Trigger greeting
   const triggerGreeting = (lang) => {
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+
     const greetingMsg = GREETINGS[lang] || GREETINGS.en;
     setMessages((prev) => [...prev, { sender: 'bot', text: greetingMsg }]);
 
@@ -301,7 +330,10 @@ export default function ChatbotWidget() {
     lastSpokenTextRef.current = greetingMsg.replace(/[*_#`~]/g, '').trim();
 
     speakText(greetingMsg, lang).then(() => {
-      setTimeout(() => {
+      if (speechTimeoutRef.current) {
+        clearTimeout(speechTimeoutRef.current);
+      }
+      speechTimeoutRef.current = setTimeout(() => {
         isSpeakingNowRef.current = false;
         if (isInCallRef.current) {
           setStatus(lang === 'hi' ? "🎧 सुन रहा हूँ..." : "🎧 Listening...");
@@ -346,6 +378,17 @@ export default function ChatbotWidget() {
   // End Call
   const endCall = () => {
     setIsInCall(false);
+    if (speechTimeoutRef.current) {
+      clearTimeout(speechTimeoutRef.current);
+      speechTimeoutRef.current = null;
+    }
+    if (activeAudioRef.current) {
+      try {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.src = "";
+      } catch (e) {}
+      activeAudioRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -438,8 +481,11 @@ export default function ChatbotWidget() {
         setStatus(currentLanguageRef.current === 'hi' ? "🗣️ बोल रहा हूँ..." : "🗣️ Speaking...");
         await speakText(reply, currentLanguageRef.current);
 
+        if (speechTimeoutRef.current) {
+          clearTimeout(speechTimeoutRef.current);
+        }
         // Add 1200ms delay to prevent tail-end audio capture from triggering loop
-        setTimeout(() => {
+        speechTimeoutRef.current = setTimeout(() => {
           isSpeakingNowRef.current = false;
           if (isInCallRef.current) {
             setStatus(currentLanguageRef.current === 'hi' ? "🎧 सुन रहा हूँ..." : "🎧 Listening...");
@@ -467,7 +513,10 @@ export default function ChatbotWidget() {
         const errorMsg = currentLanguageRef.current === 'hi' ? "क्षमा करें, कनेक्शन में समस्या है।" : "Sorry, there is a connection issue.";
         await speakText(errorMsg, currentLanguageRef.current);
         
-        setTimeout(() => {
+        if (speechTimeoutRef.current) {
+          clearTimeout(speechTimeoutRef.current);
+        }
+        speechTimeoutRef.current = setTimeout(() => {
           isSpeakingNowRef.current = false;
           if (isInCallRef.current && recognitionRef.current) {
             try {
