@@ -73,6 +73,7 @@ export default function ChatbotWidget() {
   const [currentLanguage, setCurrentLanguage] = useState("en");
   const [status, setStatus] = useState("⚡ Ready");
   const [voices, setVoices] = useState([]);
+  const [realtimeInfo, setRealtimeInfo] = useState(null);
 
   const bodyRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -98,6 +99,58 @@ export default function ChatbotWidget() {
   useEffect(() => {
     currentLanguageRef.current = currentLanguage;
   }, [currentLanguage]);
+
+  // Fetch real-time location and weather on mount
+  useEffect(() => {
+    const fetchRealtimeInfo = async () => {
+      try {
+        // Fetch IP-based location (no permission popups needed!)
+        const locRes = await fetch("https://ipapi.co/json/");
+        if (!locRes.ok) return;
+        const locData = await locRes.json();
+        const { city, region, country_name, latitude, longitude } = locData;
+
+        // Fetch current weather from Open-Meteo (completely free, no API key needed!)
+        let weatherText = "Weather info unavailable";
+        if (latitude && longitude) {
+          const weatherRes = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+          );
+          if (weatherRes.ok) {
+            const weatherData = await weatherRes.json();
+            const temp = weatherData.current_weather.temperature;
+            const code = weatherData.current_weather.weathercode;
+            
+            // Basic weather code mapping
+            const codeMap = {
+              0: "Clear sky ☀️",
+              1: "Mainly clear 🌤️", 2: "Partly cloudy ⛅", 3: "Overcast ☁️",
+              45: "Foggy 🌫️", 48: "Depositing rime fog 🌫️",
+              51: "Light drizzle 🌧️", 53: "Moderate drizzle 🌧️", 55: "Dense drizzle 🌧️",
+              61: "Slight rain 🌧️", 63: "Moderate rain 🌧️", 65: "Heavy rain 🌧️",
+              71: "Slight snow ❄️", 73: "Moderate snow ❄️", 75: "Heavy snow ❄️",
+              80: "Slight rain showers 🌦️", 81: "Moderate rain showers 🌦️", 82: "Violent rain showers ⛈️",
+              95: "Thunderstorm 🌩️", 96: "Thunderstorm with hail ⛈️"
+            };
+            const condition = codeMap[code] || "Cloudy";
+            weatherText = `${temp}°C, ${condition}`;
+          }
+        }
+
+        setRealtimeInfo({
+          city,
+          region,
+          country: country_name,
+          weather: weatherText
+        });
+        console.log("Real-time context loaded:", { city, region, weather: weatherText });
+      } catch (e) {
+        console.error("Failed to load real-time context:", e);
+      }
+    };
+
+    fetchRealtimeInfo();
+  }, []);
 
   useEffect(() => {
     if (bodyRef.current) {
@@ -355,6 +408,29 @@ export default function ChatbotWidget() {
     });
   };
 
+  const buildSystemPrompt = (lang) => {
+    const farmerName = user?.displayName || user?.email?.split('@')[0] || "Farmer";
+    const dateStr = new Date().toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+    
+    let contextPrompt = "";
+    if (lang === 'hi') {
+      contextPrompt = `किसान का नाम: ${farmerName}। तारीख: ${dateStr}। `;
+      if (realtimeInfo) {
+        contextPrompt += `स्थान: ${realtimeInfo.city}, ${realtimeInfo.region}। मौसम: ${realtimeInfo.weather}। `;
+      }
+      contextPrompt += "आप फार्मसाथी (FarmSathi) हैं - किसानों के सहायक AI असिस्टेंट। किसानों को फसलों, मौसम, कीट नियंत्रण और खाद के बारे में सरल हिंदी में 1-2 छोटे वाक्यांशों में स्पष्ट और उपयोगी सलाह दें।";
+    } else {
+      contextPrompt = `Farmer Name: ${farmerName}. Date: ${dateStr}. `;
+      if (realtimeInfo) {
+        contextPrompt += `Location: ${realtimeInfo.city}, ${realtimeInfo.region}. Weather: ${realtimeInfo.weather}. `;
+      }
+      contextPrompt += "You are FarmSathi, an AI assistant for farmers. Provide concise 1-2 sentence advice regarding crops, weather, and agricultural care.";
+    }
+    return contextPrompt;
+  };
+
   // Start Call
   const startCall = () => {
     if (recognitionRef.current) {
@@ -370,7 +446,7 @@ export default function ChatbotWidget() {
     }
     recognitionRef.current = recog;
 
-    conversationHistoryRef.current = [{ role: "system", content: SYSTEM_PROMPTS[currentLanguage] }];
+    conversationHistoryRef.current = [{ role: "system", content: buildSystemPrompt(currentLanguage) }];
     setIsInCall(true);
     triggerGreeting(currentLanguage);
   };
@@ -420,7 +496,7 @@ export default function ChatbotWidget() {
   const handleSetLanguage = (lang) => {
     setCurrentLanguage(lang);
     if (isInCallRef.current) {
-      conversationHistoryRef.current = [{ role: "system", content: SYSTEM_PROMPTS[lang] }];
+      conversationHistoryRef.current = [{ role: "system", content: buildSystemPrompt(lang) }];
       // If already in call, switch language and trigger greeting
       triggerGreeting(lang);
     }
