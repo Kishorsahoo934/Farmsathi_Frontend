@@ -151,7 +151,7 @@ export function AuthProvider({ children }) {
     return { user: loggedUser };
   }, []);
 
-  // Real Google Login using Firebase Auth (Synchronous call to prevent popup blocking)
+  // Real Google Login using Firebase Auth (Synchronous call with redirect fallback)
   const loginWithGoogle = useCallback(() => {
     return signInWithPopup(auth, googleProvider)
       .then((result) => {
@@ -166,6 +166,10 @@ export function AuthProvider({ children }) {
         return { user: loggedUser };
       })
       .catch((error) => {
+        if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+          console.log("Popup blocked or closed by user, falling back to redirect flow.");
+          return signInWithRedirect(auth, googleProvider);
+        }
         console.error("Google Auth Error:", error);
         throw error;
       });
