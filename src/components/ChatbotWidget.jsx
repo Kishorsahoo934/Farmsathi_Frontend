@@ -217,12 +217,19 @@ export default function ChatbotWidget() {
       if (lang === 'hi' && (!isNativeHindi || !isPremiumVoice) && plainText.length < 200) {
         const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=hi&client=tw-ob&q=${encodeURIComponent(plainText)}`;
         const audio = new Audio(url);
+        let fallbackCalled = false;
+        const triggerFallback = () => {
+          if (!fallbackCalled) {
+            fallbackCalled = true;
+            playBrowserSynth(plainText, lang, matchedVoice, resolve);
+          }
+        };
         audio.onended = () => resolve();
         audio.onerror = () => {
-          playBrowserSynth(plainText, lang, matchedVoice, resolve);
+          triggerFallback();
         };
         audio.play().catch(() => {
-          playBrowserSynth(plainText, lang, matchedVoice, resolve);
+          triggerFallback();
         });
         return;
       }

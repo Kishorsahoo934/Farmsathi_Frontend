@@ -217,6 +217,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const getFirebaseErrorMessage = (error) => {
+    if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+      return 'Firebase is not configured in your local environment. Google Sign-In is only available on the deployed Vercel site. Please use the standard Login or Sign Up with email instead.';
+    }
     const map = {
       'auth/email-already-in-use': 'This email is already registered.',
       'auth/invalid-email': 'Please enter a valid email address.',
