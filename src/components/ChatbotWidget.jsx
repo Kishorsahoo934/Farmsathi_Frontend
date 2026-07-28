@@ -103,18 +103,33 @@ export default function ChatbotWidget() {
   // Fetch real-time location and weather on mount
   useEffect(() => {
     const fetchRealtimeInfo = async () => {
-      try {
-        // Fetch IP-based location (no permission popups needed!)
-        const locRes = await fetch("https://ipapi.co/json/");
-        if (!locRes.ok) return;
-        const locData = await locRes.json();
-        const { city, region, country_name, latitude, longitude } = locData;
+      const getReverseGeocode = async (lat, lon) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+            {
+              headers: {
+                "Accept-Language": "en-US,en;q=0.9"
+              }
+            }
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {};
+            const city = addr.city || addr.town || addr.village || addr.suburb || "Unknown City";
+            const region = addr.state_district || addr.district || addr.county || addr.state || "Odisha";
+            return { city, region, country: addr.country || "India" };
+          }
+        } catch (err) {
+          console.error("Reverse geocoding error:", err);
+        }
+        return null;
+      };
 
-        // Fetch current weather from Open-Meteo (completely free, no API key needed!)
-        let weatherText = "Weather info unavailable";
-        if (latitude && longitude) {
+      const fetchWeather = async (lat, lon) => {
+        try {
           const weatherRes = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
           );
           if (weatherRes.ok) {
             const weatherData = await weatherRes.json();
@@ -133,19 +148,77 @@ export default function ChatbotWidget() {
               95: "Thunderstorm 🌩️", 96: "Thunderstorm with hail ⛈️"
             };
             const condition = codeMap[code] || "Cloudy";
-            weatherText = `${temp}°C, ${condition}`;
+            return `${temp}°C, ${condition}`;
           }
+        } catch (err) {
+          console.error("Weather fetch error:", err);
         }
+        return "Weather info unavailable";
+      };
 
-        setRealtimeInfo({
-          city,
-          region,
-          country: country_name,
-          weather: weatherText
+      // Native browser geolocation success handler
+      const success = async (position) => {
+        const { latitude, longitude } = position.coords;
+        console.log("Native Geolocation success:", latitude, longitude);
+        
+        const geoInfo = await getReverseGeocode(latitude, longitude);
+        const weatherText = await fetchWeather(latitude, longitude);
+
+        if (geoInfo) {
+          setRealtimeInfo({
+            city: geoInfo.city,
+            region: geoInfo.region,
+            country: geoInfo.country,
+            weather: weatherText
+          });
+          console.log("Real-time context loaded via GPS:", { ...geoInfo, weather: weatherText });
+        } else {
+          // Geocode failed, fallback to IP
+          fallbackToIP();
+        }
+      };
+
+      // Fallback to IP geolocation
+      const fallbackToIP = async () => {
+        try {
+          console.log("Falling back to IP geolocation...");
+          const locRes = await fetch("https://ipapi.co/json/");
+          if (!locRes.ok) return;
+          const locData = await locRes.json();
+          const { city, region, country_name, latitude, longitude } = locData;
+
+          let weatherText = "Weather info unavailable";
+          if (latitude && longitude) {
+            weatherText = await fetchWeather(latitude, longitude);
+          }
+
+          setRealtimeInfo({
+            city,
+            region,
+            country: country_name,
+            weather: weatherText
+          });
+          console.log("Real-time context loaded via IP fallback:", { city, region, weather: weatherText });
+        } catch (e) {
+          console.error("IP fallback also failed:", e);
+        }
+      };
+
+      // Native browser geolocation error handler
+      const error = (err) => {
+        console.warn(`Geolocation error (${err.code}): ${err.message}`);
+        fallbackToIP();
+      };
+
+      // Trigger standard browser geolocation
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(success, error, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         });
-        console.log("Real-time context loaded:", { city, region, weather: weatherText });
-      } catch (e) {
-        console.error("Failed to load real-time context:", e);
+      } else {
+        fallbackToIP();
       }
     };
 
