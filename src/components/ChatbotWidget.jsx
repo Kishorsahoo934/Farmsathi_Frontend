@@ -10,8 +10,37 @@ const GREETINGS = {
 };
 
 const SYSTEM_PROMPTS = {
-  hi: "आप फार्मसाथी (FarmSathi) हैं - किसानों के सहायक AI असिस्टेंट। किसानों को फसलों, मौसम, कीट नियंत्रण और खाद के बारे में सरल हिंदी में 1-2 छोटे वाक्यों में स्पष्ट और उपयोगी सलाह दें।",
+  hi: "आप फार्मसाथी (FarmSathi) हैं - किसानों के सहायक AI असिस्टेंट। किसानों को फसलों, मौसम, कीट नियंत्रण और खाद के बारे में सरल हिंदी में 1-2 छोटे वाक्यांशों में स्पष्ट और उपयोगी सलाह दें।",
   en: "You are FarmSathi, an AI assistant for farmers. Provide concise 1-2 sentence advice regarding crops, weather, and agricultural care."
+};
+
+// Detect echo/feedback loop between assistant voice and user microphone input
+const isEcho = (userInput, lastSpoken) => {
+  if (!lastSpoken || !userInput) return false;
+  
+  const clean = (str) => str.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g,"").split(/\s+/).filter(Boolean);
+  const userWords = clean(userInput);
+  const spokenWords = clean(lastSpoken);
+  
+  if (userWords.length === 0) return true;
+  
+  // Count matches
+  let matches = 0;
+  for (const word of userWords) {
+    if (spokenWords.includes(word)) {
+      matches++;
+    }
+  }
+  
+  const overlapRatio = matches / userWords.length;
+  
+  // For short 1-word inputs, only treat as echo if it's a filler/stopword
+  if (userWords.length === 1) {
+    const fillerWords = ['today', 'you', 'help', 'hello', 'hi', 'assistant', 'मदद', 'नमस्ते', 'सहायक', 'हूँ'];
+    return overlapRatio > 0.8 && fillerWords.includes(userWords[0]);
+  }
+  
+  return overlapRatio > 0.6;
 };
 
 // Simple markdown → HTML for chatbot messages
@@ -50,6 +79,7 @@ export default function ChatbotWidget() {
   const isSpeakingNowRef = useRef(false);
   const synthesisRef = useRef(window.speechSynthesis);
   const conversationHistoryRef = useRef([]);
+  const lastSpokenTextRef = useRef('');
 
   // Read API Key from environment variables
   const API_KEY = import.meta.env.VITE_GROQ_API_KEY || import.meta.env.VITE_API_KEY || "";
@@ -178,6 +208,7 @@ export default function ChatbotWidget() {
 
       // Strip markdown tags before speaking
       const plainText = text.replace(/[*_#`~]/g, '').trim();
+      lastSpokenTextRef.current = plainText;
 
       const matchedVoice = getBestVoice(lang);
       const isNativeHindi = matchedVoice && (matchedVoice.lang.startsWith('hi') || matchedVoice.name.toLowerCase().includes('hindi'));
@@ -221,6 +252,12 @@ export default function ChatbotWidget() {
     recog.onresult = async (event) => {
       if (!isInCallRef.current) return;
       const text = event.results[0][0].transcript;
+      
+      if (isEcho(text, lastSpokenTextRef.current)) {
+        console.log("Echo/Feedback loop detected and ignored:", text);
+        return;
+      }
+      
       sendMessage(null, text);
     };
 
@@ -254,6 +291,7 @@ export default function ChatbotWidget() {
 
     isSpeakingNowRef.current = true;
     setStatus(lang === 'hi' ? "🗣️ बोल रहा हूँ..." : "🗣️ Speaking...");
+    lastSpokenTextRef.current = greetingMsg.replace(/[*_#`~]/g, '').trim();
 
     speakText(greetingMsg, lang).then(() => {
       setTimeout(() => {
@@ -274,7 +312,7 @@ export default function ChatbotWidget() {
             } catch (e) {}
           }
         }
-      }, 600);
+      }, 1200);
     });
   };
 
@@ -393,7 +431,7 @@ export default function ChatbotWidget() {
         setStatus(currentLanguageRef.current === 'hi' ? "🗣️ बोल रहा हूँ..." : "🗣️ Speaking...");
         await speakText(reply, currentLanguageRef.current);
 
-        // Add 600ms delay to prevent tail-end audio capture from triggering loop
+        // Add 1200ms delay to prevent tail-end audio capture from triggering loop
         setTimeout(() => {
           isSpeakingNowRef.current = false;
           if (isInCallRef.current) {
@@ -404,7 +442,7 @@ export default function ChatbotWidget() {
               } catch (e) {}
             }
           }
-        }, 600);
+        }, 1200);
       } else {
         // Standard text mode: call backend as before
         const fd = new FormData();
@@ -429,7 +467,7 @@ export default function ChatbotWidget() {
               recognitionRef.current.start();
             } catch (e) {}
           }
-        }, 600);
+        }, 1200);
       }
     } finally {
       setLoading(false);
