@@ -2,19 +2,8 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/constants';
 
-/*
-// FIREBASE CODE PRESERVED FOR FUTURE USE (AS REQUESTED)
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-} from 'firebase/auth';
+import { signInWithPopup, signOut } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
-*/
 
 const AuthContext = createContext(null);
 
@@ -113,21 +102,34 @@ export function AuthProvider({ children }) {
     return { user: loggedUser };
   }, []);
 
-  // Mock Google Login (Instantly logs in without popups/redirect issues)
+  // Real Google Login using Firebase Auth
   const loginWithGoogle = useCallback(async () => {
-    await new Promise((r) => setTimeout(r, 300)); // Simulated delay
-    const loggedUser = {
-      uid: 'mock-google-uid-123',
-      email: 'kishorsahoo934@gmail.com',
-      displayName: 'Kishor Sahoo',
-    };
-    localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
-    setUser(loggedUser);
-    return { user: loggedUser };
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+      const loggedUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+      };
+      localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
+      setUser(loggedUser);
+      return { user: loggedUser };
+    } catch (error) {
+      console.error("Google Auth Error:", error);
+      throw error;
+    }
   }, []);
 
-  // Mock Logout
+  // Logout (handles both Firebase and Mock sessions)
   const logout = useCallback(async () => {
+    try {
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+    } catch (e) {
+      console.error('Error signing out from Firebase:', e);
+    }
     localStorage.removeItem('farmsathi_user');
     setUser(null);
   }, []);
