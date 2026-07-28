@@ -54,13 +54,14 @@ export default function AuthModal({ onClose }) {
     setError('');
     setLoading(true);
     try {
-      await loginWithGoogle();
-      showToast('Welcome to FarmSathi 🌾', 'success');
-      onClose();
-      navigate('/dashboard');
+      const res = await loginWithGoogle();
+      if (res && res.user) {
+        showToast('Welcome to FarmSathi 🌾', 'success');
+        onClose();
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(getFirebaseErrorMessage(err));
-    } finally {
       setLoading(false);
     }
   };

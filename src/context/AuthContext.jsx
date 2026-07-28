@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config/constants';
 
-import { signInWithPopup, signOut } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth, googleProvider } from '../config/firebase';
 
 const AuthContext = createContext(null);
@@ -13,8 +13,9 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
-  // Initialize user from localStorage (Mock Persistence)
+  // Initialize user from localStorage or Firebase Auth Redirect (Mock + Real Sync)
   useEffect(() => {
+    // Check localStorage first
     const savedUser = localStorage.getItem('farmsathi_user');
     if (savedUser) {
       try {
@@ -22,8 +23,27 @@ export function AuthProvider({ children }) {
       } catch (e) {
         console.error('Error parsing saved user:', e);
       }
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    // Check Firebase for user state (handles redirect results and persistent Google login sessions)
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        const loggedUser = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+        };
+        localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
+        setUser(loggedUser);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -116,6 +136,11 @@ export function AuthProvider({ children }) {
       setUser(loggedUser);
       return { user: loggedUser };
     } catch (error) {
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+        console.log("Popup blocked or closed by user, falling back to redirect flow.");
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
       console.error("Google Auth Error:", error);
       throw error;
     }
