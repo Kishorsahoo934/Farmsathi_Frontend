@@ -15,33 +15,7 @@ export function AuthProvider({ children }) {
 
   // Initialize user from localStorage or Firebase Auth Redirect (Mock + Real Sync)
   useEffect(() => {
-    let active = true;
-
-    const handleAuthUser = (firebaseUser) => {
-      if (!active) return;
-      const loggedUser = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-      };
-      localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
-      setUser(loggedUser);
-      setLoading(false);
-    };
-
-    // 1. Process Firebase redirect result first (if any)
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result && result.user) {
-          handleAuthUser(result.user);
-          navigate('/dashboard');
-        }
-      })
-      .catch((error) => {
-        console.error("Error handling redirect result:", error);
-      });
-
-    // 2. Check localStorage (Mock persistence)
+    // 1. Check localStorage first (Mock persistence)
     const savedUser = localStorage.getItem('farmsathi_user');
     if (savedUser) {
       try {
@@ -50,26 +24,55 @@ export function AuthProvider({ children }) {
         console.error('Error parsing saved user:', e);
       }
       setLoading(false);
-    } else {
-      // 3. Check Firebase for user state (handles persistent Google login sessions)
-      const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-        if (!active) return;
-        if (firebaseUser) {
-          handleAuthUser(firebaseUser);
-        } else {
-          setUser(null);
-          setLoading(false);
-        }
-      });
-      return () => {
-        active = false;
-        unsubscribe();
-      };
+      return;
     }
 
-    return () => {
-      active = false;
+    // 2. Otherwise, handle Firebase Auth
+    let resolvedRedirect = false;
+    let currentFirebaseUser = null;
+
+    const checkLoadingState = () => {
+      if (resolvedRedirect) {
+        if (currentFirebaseUser) {
+          const loggedUser = {
+            uid: currentFirebaseUser.uid,
+            email: currentFirebaseUser.email,
+            displayName: currentFirebaseUser.displayName || currentFirebaseUser.email.split('@')[0],
+          };
+          localStorage.setItem('farmsathi_user', JSON.stringify(loggedUser));
+          setUser(loggedUser);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
     };
+
+    // Process redirect result
+    getRedirectResult(auth)
+      .then((result) => {
+        resolvedRedirect = true;
+        if (result && result.user) {
+          currentFirebaseUser = result.user;
+          checkLoadingState();
+          navigate('/dashboard');
+        } else {
+          checkLoadingState();
+        }
+      })
+      .catch((error) => {
+        console.error("Error handling redirect result:", error);
+        resolvedRedirect = true;
+        checkLoadingState();
+      });
+
+    // Listen for auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      currentFirebaseUser = firebaseUser;
+      checkLoadingState();
+    });
+
+    return () => unsubscribe();
   }, [navigate]);
 
   useEffect(() => {
