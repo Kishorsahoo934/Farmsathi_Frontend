@@ -34,13 +34,12 @@ export default function SurveyPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // 1. Send the email with survey response
       await sendSurveyEmail({
-        from_name: form.name || 'Anonymous',
-        from_email: form.contact,
-        phone: form.contact,
-        message: `Experience Rating: ${form.rating} Stars\n\nComments:\n${form.message}`,
-        subject: 'New User Survey Response - FarmSathi',
+        user_name: form.name || 'Anonymous',
+        user_email: form.contact,
+        subject: 'New User Survey Response',
+        title: 'New User Survey Response',
+        message: `Experience Rating: ${form.rating}/5 Stars\n\nComments: ${form.message}`,
       });
 
       // 2. Also save locally in localStorage as fallback

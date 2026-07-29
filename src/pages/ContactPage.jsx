@@ -34,11 +34,11 @@ export default function ContactPage() {
     setLoading(true);
     try {
       await sendEmail({
-        from_name: form.name || 'Anonymous',
-        from_email: form.email,
-        phone: form.phone || 'Not provided',
-        message: form.message,
-        subject: 'New Contact Message from FarmSathi',
+        user_name: form.name || 'Anonymous',
+        user_email: form.email,
+        subject: 'New Contact Message',
+        title: 'New Contact Message',
+        message: `${form.message}${form.phone ? `\n\nPhone: ${form.phone}` : ''}`,
       });
       showToast('Message sent! We\'ll get back to you soon.', 'success');
       setForm({ name: '', email: '', phone: '', message: '' });
