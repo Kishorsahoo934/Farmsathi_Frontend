@@ -691,8 +691,17 @@ export default function ChatbotWidget() {
 
   return (
     <>
-      <button className="chatbot-toggle" onClick={() => setOpen(!open)} title="Chat with FarmSathi">
-        {open ? '✕' : '💬'}
+      <button 
+        className="chatbot-toggle farmsathi-fab" 
+        id="fabBtn" 
+        onClick={() => setOpen(!open)} 
+        title="Chat with FarmSathi"
+      >
+        {open ? (
+          <span className="chatbot-close-icon">✕</span>
+        ) : (
+          <img src="/logo.jpg" alt="FarmSathi Logo" className="chatbot-logo-img" />
+        )}
       </button>
       {open && (
         <div className="chatbot-wrapper">
