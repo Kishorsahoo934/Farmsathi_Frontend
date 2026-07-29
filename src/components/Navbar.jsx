@@ -23,7 +23,6 @@ export default function Navbar() {
     { to: '/disease-detect', label: '🔬 Disease' },
     { to: '/fertilizer-recommend', label: '🧪 Fertilizer' },
     { to: '/survey', label: 'Survey' },
-    { to: '/feedback', label: 'Feedback' },
     { to: '/contact', label: 'Contact' },
   ];
 

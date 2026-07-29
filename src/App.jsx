@@ -11,7 +11,6 @@ import CropRecommendPage from './pages/CropRecommendPage';
 import FertilizerRecommendPage from './pages/FertilizerRecommendPage';
 import DiseaseDetectPage from './pages/DiseaseDetectPage';
 import SurveyPage from './pages/SurveyPage';
-import FeedbackPage from './pages/FeedbackPage';
 import ContactPage from './pages/ContactPage';
 import { useAuth } from './context/AuthContext';
 
@@ -28,7 +27,6 @@ function AppRoutes() {
         <Route path="/fertilizer-recommend" element={<ProtectedRoute><FertilizerRecommendPage /></ProtectedRoute>} />
         <Route path="/disease-detect" element={<ProtectedRoute><DiseaseDetectPage /></ProtectedRoute>} />
         <Route path="/survey" element={<ProtectedRoute><SurveyPage /></ProtectedRoute>} />
-        <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
         <Route path="/contact" element={<ProtectedRoute><ContactPage /></ProtectedRoute>} />
         <Route path="*" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       </Routes>
