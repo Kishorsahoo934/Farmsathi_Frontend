@@ -3,6 +3,9 @@ import { useToast } from '../context/ToastContext';
 import { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY } from '../config/constants';
 
 async function sendEmail(params) {
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+    throw new Error('EmailJS keys are missing from environment variables (VITE_EMAILJS_SERVICE_ID, etc.).');
+  }
   const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -13,7 +16,10 @@ async function sendEmail(params) {
       template_params: params,
     }),
   });
-  if (!res.ok) throw new Error('Failed to send message.');
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Failed to send message.');
+  }
 }
 
 export default function ContactPage() {

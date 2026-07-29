@@ -1,23 +1,63 @@
 import { useState } from 'react';
 import { useToast } from '../context/ToastContext';
+import { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY } from '../config/constants';
+
+async function sendSurveyEmail(params) {
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+    throw new Error('EmailJS keys are missing from environment variables (VITE_EMAILJS_SERVICE_ID, etc.).');
+  }
+  const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: EMAILJS_TEMPLATE_ID,
+      user_id: EMAILJS_PUBLIC_KEY,
+      template_params: params,
+    }),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Failed to submit survey.');
+  }
+}
 
 export default function SurveyPage() {
   const { showToast } = useToast();
   const [form, setForm] = useState({ name: '', contact: '', rating: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      const existing = JSON.parse(localStorage.getItem('farmsathi_survey') || '[]');
-      existing.push({ ...form, createdAt: new Date().toISOString() });
-      localStorage.setItem('farmsathi_survey', JSON.stringify(existing));
-    } catch { /* ignore */ }
-    setSubmitted(true);
-    showToast('Survey submitted! Thank you for your feedback.', 'success');
-    setForm({ name: '', contact: '', rating: '', message: '' });
+      // 1. Send the email with survey response
+      await sendSurveyEmail({
+        from_name: form.name || 'Anonymous',
+        from_email: form.contact,
+        phone: form.contact,
+        message: `Experience Rating: ${form.rating} Stars\n\nComments:\n${form.message}`,
+        subject: 'New User Survey Response - FarmSathi',
+      });
+
+      // 2. Also save locally in localStorage as fallback
+      try {
+        const existing = JSON.parse(localStorage.getItem('farmsathi_survey') || '[]');
+        existing.push({ ...form, createdAt: new Date().toISOString() });
+        localStorage.setItem('farmsathi_survey', JSON.stringify(existing));
+      } catch { /* ignore localstorage error */ }
+
+      setSubmitted(true);
+      showToast('Survey submitted! Thank you for your feedback.', 'success');
+      setForm({ name: '', contact: '', rating: '', message: '' });
+    } catch (err) {
+      showToast(err.message || 'Failed to submit survey.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,8 +97,8 @@ export default function SurveyPage() {
             <label>Comments</label>
             <textarea name="message" value={form.message} onChange={handleChange} rows={4} required placeholder="Share your thoughts…" />
           </div>
-          <button type="submit" className="btn btn-primary" style={{ alignSelf: 'flex-start' }}>
-            Submit Survey
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ alignSelf: 'flex-start' }}>
+            {loading ? '⏳ Submitting…' : 'Submit Survey'}
           </button>
         </form>
       </section>
