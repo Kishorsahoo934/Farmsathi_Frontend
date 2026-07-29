@@ -1579,3 +1579,329 @@ main {
     padding: 88px 1rem 2.5rem;
   }
 }
+
+/* ============================================================
+   MANDI DASHBOARD & PRICE INSIGHTS
+   ============================================================ */
+.mandi-section {
+  background: #fff;
+  border-radius: 20px;
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eef2ed;
+}
+
+.mandi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid #f1f5f0;
+  padding-bottom: 1rem;
+}
+
+.mandi-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.mandi-title h2 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1b3d1b;
+  margin: 0;
+}
+
+.mandi-title span {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+  display: block;
+}
+
+.mandi-selector-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mandi-selector-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #555;
+}
+
+.mandi-select {
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #2e7d32;
+  background-color: #f1f8e9;
+  border: 1.5px solid #c5e1a5;
+  border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232e7d32' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  background-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.mandi-select:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+.mandi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.mandi-card {
+  background: #fcfdfe;
+  border: 1px solid #e8ede7;
+  border-radius: 14px;
+  padding: 0.9rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.mandi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: background-color 0.25s ease;
+}
+
+.mandi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  border-color: #c5e1a5;
+}
+
+.mandi-card.active {
+  background: #f1f8e9;
+  border-color: #81c784;
+}
+
+.mandi-card.active::before {
+  background: #2e7d32;
+}
+
+.mandi-card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.mandi-card-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.mandi-card-price {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #1a3a1a;
+  margin-bottom: 0.35rem;
+}
+
+.mandi-card-price span {
+  font-size: 0.65rem;
+  color: #777;
+  font-weight: 500;
+}
+
+.mandi-card-change {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  align-self: flex-start;
+}
+
+.mandi-card-change.up {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.mandi-card-change.down {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.mandi-chart-wrapper {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.mandi-chart-container {
+  background: #fafbfa;
+  border: 1px solid #eef2ed;
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.mandi-chart-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2e7d32;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mandi-chart-svg-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+}
+
+.mandi-chart-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.mandi-advisory {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #fafffa, #f4faf2);
+  border: 1px solid #e1efe0;
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.mandi-advisory-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.mandi-advisory-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.mandi-advisory-badge.sell {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.mandi-advisory-badge.hold {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.mandi-advisory-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.mandi-advisory-title h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.mandi-advisory-title span {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.mandi-advisory-body {
+  font-size: 0.85rem;
+  color: #444;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+  flex: 1;
+}
+
+.mandi-advisory-body ul {
+  padding-left: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.mandi-advisory-body li {
+  margin-bottom: 0.35rem;
+}
+
+.mandi-advisory-footer {
+  background: #fff;
+  border: 1px dashed #c5e1a5;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.78rem;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mandi-chart-tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  pointer-events: none;
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  z-index: 10;
+  transition: left 0.15s ease, top 0.15s ease;
+}
+
+.mandi-chart-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px 4px 0;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.85) transparent;
+  display: block;
+  width: 0;
+}
+
+@media (max-width: 820px) {
+  .mandi-chart-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
